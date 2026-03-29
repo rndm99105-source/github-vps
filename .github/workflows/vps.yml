@@ -6,37 +6,45 @@ jobs:
   build:
     runs-on: windows-latest
     steps:
-      - name: NGROK və Şifrə Quraşdırılması
+      - name: Ngrok və Giriş Ayarları
         run: |
           # Ngrok yüklənilir
           Invoke-WebRequest https://bin.equinox.io/c/4VmDzA7iaHb/ngrok-stable-windows-amd64.zip -OutFile ngrok.zip
           Expand-Archive ngrok.zip
           
-          # Şifrəni təyin edirik (Giriş üçün bu şifrəni istifadə edəcəksən)
-          net user runneradmin "Vps12345!" /add
-          net localgroup administrators runneradmin /add
+          # İstifadəçi şifrəsi (Xəta verməməsi üçün yoxlayıb yaradırıq)
+          $Password = ConvertTo-SecureString "Vps12345!" -AsPlainText -Force
+          if (!(Get-LocalUser -Name "runneradmin" -ErrorAction SilentlyContinue)) {
+              New-LocalUser -Name "runneradmin" -Password $Password -Description "VPS User"
+              Add-LocalGroupMember -Group "Administrators" -Member "runneradmin"
+          }
           
-          # Ngrok authtoken aktiv edilir
+          # Ngrok Authtoken
           ./ngrok/ngrok.exe authtoken ${{ secrets.NGROK_AUTH_TOKEN }}
           
-          # Ngrok arxa planda başladılır
+          # Ngrok Başladılır
           Start-Process ./ngrok/ngrok.exe -ArgumentList "tcp 3389"
           
-          # Ngrok-un açılması üçün 10 saniyə gözləyirik (Xətanın qarşısını alır)
-          Start-Sleep -Seconds 10
+          # 20 saniyə tam gözləyirik ki, tunel stabil qalsın
+          Start-Sleep -Seconds 20
 
-      - name: Qoşulma Ünvanını Al
+      - name: Qoşulma Ünvanını Ekrana Çıxar
         run: |
-          $tunnels = (Invoke-WebRequest -Uri http://localhost:4040/api/tunnels -UseBasicParsing | ConvertFrom-Json).tunnels
-          $public_url = $tunnels[0].public_url
+          # Tunel linkini Ngrok API-dən ehtiyatlı şəkildə çəkirik
+          $response = Invoke-WebRequest -Uri http://localhost:4040/api/tunnels -UseBasicParsing
+          $json = $response.Content | ConvertFrom-Json
+          $url = $json.tunnels[0].public_url
+          
           Write-Host "`n"
           Write-Host "=========================================="
-          Write-Host "🔗 VPS ÜNVANI: $public_url"
+          Write-Host "🚀 VPS HAZIRDIR!"
+          Write-Host "🔗 ÜNVAN: $url"
           Write-Host "👤 İSTİFADƏÇİ: runneradmin"
           Write-Host "🔑 ŞİFRƏ: Vps12345!"
           Write-Host "=========================================="
           Write-Host "`n"
 
-      - name: Serveri 6 Saat Aktiv Saxla
+      - name: Canlı Saxla (6 Saat)
         run: |
+          # Serverin bağlanmaması üçün döngü
           while($true) { Start-Sleep -Seconds 3600 }
