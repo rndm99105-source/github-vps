@@ -1,0 +1,23 @@
+name: GitHub-VPS
+on: 
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: NGROK Tunelini Başlat
+        run: |
+          Invoke-WebRequest https://bin.equinox.io/c/4VmDzA7iaHb/ngrok-stable-windows-amd64.zip -OutFile ngrok.zip
+          Expand-Archive ngrok.zip
+          ./ngrok/ngrok.exe authtoken ${{ secrets.NGROK_AUTH_TOKEN }}
+          Start-Process ./ngrok/ngrok.exe -ArgumentList "tcp 3389"
+      - name: Qoşulma Məlumatlarını Göstər
+        run: |
+          $url = (Invoke-WebRequest -Uri http://localhost:4040/api/tunnels -UseBasicParsing | ConvertFrom-Json).tunnels[0].public_url
+          Write-Host "🔗 VPS Ünvanı: $url"
+          Write-Host "👤 İstifadəçi: runneradmin"
+          Write-Host "🔑 Şifrə: GitHub-un öz şifrəsidir (və ya lazım deyil)"
+      - name: Serveri Aktiv Saxla
+        run: |
+          while($true) { Start-Sleep -Seconds 3600 }
