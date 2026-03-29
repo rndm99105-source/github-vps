@@ -14,29 +14,32 @@ jobs:
           net localgroup administrators runneradmin /add
           ./ngrok/ngrok.exe authtoken "3BcGhxJdpZFxKdIeYYhLTqoIYmJ_4kWcZoJk4xPmmVpVn8pNW"
           
-          # Ngrok-u birbaşa terminalda başladırıq (Log gözləmədən)
-          Write-Host "🚀 VPS Başladılır... 10 saniyə gözləyin."
+          Write-Host "🚀 VPS Başladılır... 20 saniyə gözləyin."
           Start-Process ./ngrok/ngrok.exe -ArgumentList "tcp 3389"
-          Start-Sleep -Seconds 15
+          Start-Sleep -Seconds 20
           
       - name: Linki Çıxar
         run: |
-          # Ngrok-un rəsmi API-sindən linki çəkmək üçün 3 cəhd edirik
-          for ($i=1; $i -le 5; $i++) {
+          $url = ""
+          for ($i=1; $i -le 6; $i++) {
               try {
                   $content = Invoke-WebRequest -Uri http://localhost:4040/api/tunnels -UseBasicParsing
-                  $url = ($content.Content | ConvertFrom-Json).tunnels[0].public_url
-                  if ($url) { 
-                      Write-Host "✅ TAPILDI: $url"
-                      break 
-                  }
+                  $json = $content.Content | ConvertFrom-Json
+                  $url = $json.tunnels[0].public_url
+                  if ($url) { break }
               } catch { 
-                  Write-Host "⏳ Cəhd $i: Gözlənilir..."
+                  Write-Host "⏳ Gözlənilir..."
                   Start-Sleep -Seconds 5 
               }
           }
-          Write-Host "=========================================="
+          Write-Host "`n=========================================="
           Write-Host "🔗 ÜNVAN: $url"
           Write-Host "👤 AD: runneradmin | 🔑 ŞİFRƏ: Vps12345!"
-          Write-Host "=========================================="
-          while($true) { Start-Sleep -Seconds 3600 }
+          Write-Host "==========================================`n"
+          
+          if ($url) {
+              while($true) { Start-Sleep -Seconds 3600 }
+          } else {
+              Write-Host "❌ Link tapılmadı. Ngrok panelini yoxlayın."
+              exit 1
+          }
