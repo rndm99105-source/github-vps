@@ -6,46 +6,37 @@ jobs:
   build:
     runs-on: windows-latest
     steps:
-      - name: Ngrok və RDP Hazırlığı
+      - name: VPS Qurulur
         run: |
           Invoke-WebRequest https://bin.equinox.io/c/4VmDzA7iaHb/ngrok-stable-windows-amd64.zip -OutFile ngrok.zip
           Expand-Archive ngrok.zip
-          
           net user runneradmin "Vps12345!" /add
           net localgroup administrators runneradmin /add
-          
-          Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -name "fDenyTSConnections" -Value 0
-          Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
-          
           ./ngrok/ngrok.exe authtoken "3BcGhxJdpZFxKdIeYYhLTqoIYmJ_4kWcZoJk4xPmmVpVn8pNW"
           
-          # Ngrok-u başladırıq
-          Start-Process ./ngrok/ngrok.exe -ArgumentList "tcp 3389 --log=stdout" -RedirectStandardOutput "ngrok.log"
-
-      - name: VPS Linkini Gözlə və Göstər
+          # Ngrok-u birbaşa terminalda başladırıq (Log gözləmədən)
+          Write-Host "🚀 VPS Başladılır... 10 saniyə gözləyin."
+          Start-Process ./ngrok/ngrok.exe -ArgumentList "tcp 3389"
+          Start-Sleep -Seconds 15
+          
+      - name: Linki Çıxar
         run: |
-          Write-Host "⏳ Link gözlənilir (təxminən 30 saniyə)..."
-          $url = ""
-          while($url -eq "") {
-              Start-Sleep -Seconds 5
-              if (Test-Path ngrok.log) {
-                  $log = Get-Content ngrok.log
-                  $line = $log | Select-String "url=tcp://"
-                  if ($line) {
-                      $url = ($line.ToString() -split "url=")[1].Trim()
+          # Ngrok-un rəsmi API-sindən linki çəkmək üçün 3 cəhd edirik
+          for ($i=1; $i -le 5; $i++) {
+              try {
+                  $content = Invoke-WebRequest -Uri http://localhost:4040/api/tunnels -UseBasicParsing
+                  $url = ($content.Content | ConvertFrom-Json).tunnels[0].public_url
+                  if ($url) { 
+                      Write-Host "✅ TAPILDI: $url"
+                      break 
                   }
+              } catch { 
+                  Write-Host "⏳ Cəhd $i: Gözlənilir..."
+                  Start-Sleep -Seconds 5 
               }
           }
-          
-          Write-Host "`n"
           Write-Host "=========================================="
-          Write-Host "🚀 VPS ARTIQ ONLINEDIR!"
           Write-Host "🔗 ÜNVAN: $url"
-          Write-Host "👤 İSTİFADƏÇİ: runneradmin"
-          Write-Host "🔑 ŞİFRƏ: Vps12345!"
+          Write-Host "👤 AD: runneradmin | 🔑 ŞİFRƏ: Vps12345!"
           Write-Host "=========================================="
-          Write-Host "`n"
-
-      - name: Bağlanma (6 Saat Aktivdir)
-        run: |
           while($true) { Start-Sleep -Seconds 3600 }
