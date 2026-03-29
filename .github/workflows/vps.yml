@@ -10,9 +10,13 @@ jobs:
         run: |
           Invoke-WebRequest https://bin.equinox.io/c/4VmDzA7iaHb/ngrok-stable-windows-amd64.zip -OutFile ngrok.zip
           Expand-Archive ngrok.zip
+          
+          # İstifadəçi və Şifrə Ayarı
           net user runneradmin "Vps12345!" /add
           net localgroup administrators runneradmin /add
-          ./ngrok/ngrok.exe authtoken "3BcGhxJdpZFxKdIeYYhLTqoIYmJ_4kWcZoJk4xPmmVpVn8pNW"
+          
+          # Sənin yeni Ngrok Keyin
+          ./ngrok/ngrok.exe authtoken "3BchOCAtFIuAWU1epCPn3imRN2S_6DWg2E6tfPpxRB9BAz7AR"
           
           Write-Host "🚀 VPS Başladılır... 20 saniyə gözləyin."
           Start-Process ./ngrok/ngrok.exe -ArgumentList "tcp 3389"
@@ -21,6 +25,7 @@ jobs:
       - name: Linki Çıxar
         run: |
           $url = ""
+          # Linki tapmaq üçün 6 dəfə cəhd edirik
           for ($i=1; $i -le 6; $i++) {
               try {
                   $content = Invoke-WebRequest -Uri http://localhost:4040/api/tunnels -UseBasicParsing
@@ -28,18 +33,18 @@ jobs:
                   $url = $json.tunnels[0].public_url
                   if ($url) { break }
               } catch { 
-                  Write-Host "⏳ Gözlənilir..."
+                  Write-Host "⏳ Link gözlənilir..."
                   Start-Sleep -Seconds 5 
               }
           }
-          Write-Host "`n=========================================="
-          Write-Host "🔗 ÜNVAN: $url"
-          Write-Host "👤 AD: runneradmin | 🔑 ŞİFRƏ: Vps12345!"
-          Write-Host "==========================================`n"
           
           if ($url) {
+              Write-Host "`n=========================================="
+              Write-Host "🔗 ÜNVAN: $url"
+              Write-Host "👤 AD: runneradmin | 🔑 ŞİFRƏ: Vps12345!"
+              Write-Host "==========================================`n"
               while($true) { Start-Sleep -Seconds 3600 }
           } else {
-              Write-Host "❌ Link tapılmadı. Ngrok panelini yoxlayın."
+              Write-Host "❌ Link tapılmadı. Ngrok panelini (dashboard) yoxlayın."
               exit 1
           }
